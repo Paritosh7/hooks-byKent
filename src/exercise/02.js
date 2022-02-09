@@ -3,14 +3,42 @@
 
 import * as React from 'react'
 
-function Greeting({initialName = ''}) {
-  // 🐨 initialize the state to the value from localStorage
-  // 💰 window.localStorage.getItem('name') ?? initialName
-  const [name, setName] = React.useState(initialName)
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  {serialize = JSON.stringify, deserealize = JSON.parse} = {},
+) {
+  console.log('custom Hook called')
+  const [state, setState] = React.useState(() => {
+    const valueInLocalStorage = deserealize(window.localStorage.getItem(key))
+    if (valueInLocalStorage) {
+      return valueInLocalStorage
+    } else {
+      if (typeof defaultValue === 'function') {
+        return defaultValue()
+      }
+      return defaultValue
+    }
+  })
 
-  // 🐨 Here's where you'll use `React.useEffect`.
-  // The callback should set the `name` in localStorage.
-  // 💰 window.localStorage.setItem('name', name)
+  const previousKeyRef = React.useRef(key)
+
+  React.useEffect(() => {
+    let previousKey = previousKeyRef.current
+    if (previousKey !== key) {
+      window.localStorage.removeItem(previousKey)
+    }
+    previousKeyRef.current = key
+    window.localStorage.setItem(key, serialize(state))
+  }, [state, key, serialize])
+
+  return [state, setState]
+}
+
+function Greeting({initialName = ''}) {
+  console.log('normal component called')
+
+  const [name, setName] = useLocalStorageState('name', initialName)
 
   function handleChange(event) {
     setName(event.target.value)
